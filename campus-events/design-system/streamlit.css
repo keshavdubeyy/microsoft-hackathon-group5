@@ -1,0 +1,20 @@
+/* Streamlit overrides applying the design system. Loaded after tokens.css */
+html, body, [class*="st-"], .stApp { font-family: var(--font-openai-sans); letter-spacing: var(--tracking-body); }
+.stApp { background: var(--color-paper); color: var(--color-obsidian); }
+header[data-testid="stHeader"] { background: var(--color-paper); }
+h1 { font-size: var(--text-display); line-height: var(--leading-display); letter-spacing: var(--tracking-display); font-weight: var(--font-weight-medium); }
+h2 { font-size: var(--text-heading); line-height: var(--leading-heading); letter-spacing: var(--tracking-heading); font-weight: var(--font-weight-semibold); }
+h3 { font-size: var(--text-subheading); line-height: var(--leading-subheading); letter-spacing: var(--tracking-subheading); font-weight: var(--font-weight-medium); }
+.stButton > button, .stFormSubmitButton > button, .stDownloadButton > button {
+  border-radius: var(--radius-buttons); border: 1px solid var(--color-hairline);
+  background: transparent; color: var(--color-obsidian);
+  font-size: 14px; font-weight: var(--font-weight-medium); padding: 8px 20px;
+}
+.stButton > button:hover, .stFormSubmitButton > button:hover { border-color: var(--color-hairline); background: var(--color-whisper); color: var(--color-obsidian); box-shadow: var(--shadow-sm); }
+.stButton > button[kind="primary"], .stFormSubmitButton > button[kind="primary"] { background: var(--color-obsidian); color: var(--color-paper); border-color: var(--color-obsidian); }
+.stButton > button[kind="primary"]:hover, .stFormSubmitButton > button[kind="primary"]:hover { background: var(--color-obsidian); color: var(--color-paper); opacity: .85; }
+.stTextInput input, .stTextArea textarea, .stNumberInput input, .stDateInput input, .stTimeInput input { border-radius: var(--radius-inputs); }
+.stTextArea textarea { border-radius: 20px; }
+div[data-baseweb="select"] > div { border-radius: var(--radius-inputs); border-color: var(--color-hairline); }
+[data-testid="stSidebar"] { background: var(--color-ash); }
+[data-testid="stDataFrame"], [data-testid="stForm"] { border-radius: var(--radius-cards); border-color: var(--color-hairline); }

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Design System</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="components.css">
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav__inner">
+      <a class="nav__brand" href="#">Brand</a>
+      <div class="nav__links">
+        <a class="btn btn--ghost" href="#">Research</a>
+        <a class="btn btn--ghost" href="#">Products</a>
+        <a class="btn btn--ghost" href="#">Developers</a>
+      </div>
+      <div class="nav__actions">
+        <a class="btn btn--ghost" href="#">Log in</a>
+        <a class="btn btn--filled" href="#">Get started</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+    <section class="section" style="text-align:center; margin-top: 120px;">
+      <h1 class="display">What can I help with?</h1>
+      <div style="max-width:680px; margin: var(--spacing-32) auto var(--spacing-16);">
+        <input class="input" placeholder="Plan a surf trip to Costa Rica in August">
+      </div>
+      <div class="chips">
+        <button class="btn">Talk with us</button>
+        <button class="btn">Research</button>
+        <button class="btn">API Platform</button>
+        <button class="btn">Write</button>
+      </div>
+    </section>
+
+    <section class="section">
+      <p class="section-label">Latest</p>
+      <div class="grid-editorial">
+        <article class="card card--hero">
+          <div class="card__media" style="aspect-ratio: 4 / 3"></div>
+          <h2 class="card__title">A featured story headline</h2>
+          <span class="meta">Product · 12 min read</span>
+        </article>
+        <div class="stack">
+          <article class="card card--small">
+            <div class="card__media"></div>
+            <h3 class="card__title">Secondary story</h3>
+            <span class="meta">Research · 6 min read</span>
+          </article>
+          <article class="card card--small">
+            <div class="card__media"></div>
+            <h3 class="card__title">Another story</h3>
+            <span class="meta">Company · 4 min read</span>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer"><div class="container">© Footer · Privacy · Terms</div></footer>
+</body>
+</html>
