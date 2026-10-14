@@ -2,11 +2,8 @@
 import logging
 
 from auth import verify_password
-from datetime import datetime
-
 from db import find
-from rules.models import ACTIVE, CONFIRMED, DT_FORMAT, PENDING, REJECTED
-from rules.validation import find_conflicts
+from rules.models import ACTIVE, CONFIRMED, PENDING
 
 log = logging.getLogger("rules")
 
@@ -84,55 +81,3 @@ def venue_schedule(store, venue_id):
         for b in list_blocks(store, venue_id=venue_id)
     ]
     return sorted(rows, key=lambda row: row["start"])
-
-
-def search_requests(store, text="", statuses=None):
-    """Requests whose title, type, venue, requester or id contains `text` (case-insensitive).
-
-    `statuses` limits the result to those statuses; None or empty means all.
-    """
-    needle = str(text or "").strip().lower()
-    rows = []
-    for r in list_requests(store):
-        if statuses and r["status"] not in statuses:
-            continue
-        haystack = " ".join(
-            str(r[k]) for k in ("id", "title", "event_type", "venue_name", "requester_name")
-        ).lower()
-        if needle in haystack:
-            rows.append(r)
-    return rows
-
-
-def review_details(store, request_id):
-    """Everything an Admin needs to decide on a request, or None if it does not exist."""
-    data = store.read()
-    request = find(data["requests"], request_id)
-    if request is None:
-        return None
-    venue = find(data["venues"], request["venue_id"])
-    hours = (
-        datetime.strptime(request["end"], DT_FORMAT) - datetime.strptime(request["start"], DT_FORMAT)
-    ).total_seconds() / 3600
-    day = request["start"][:10]
-    same_day = [
-        row for row in venue_schedule(store, request["venue_id"])
-        if row["start"][:10] <= day <= row["end"][:10]
-        and not (row["kind"] == "Pending hold" and row["ref"] == request_id)
-    ]
-    history = [r for r in data["requests"]
-               if r["requester_id"] == request["requester_id"] and r["id"] != request_id]
-    return {
-        "capacity": venue["capacity"],
-        "venue_type": venue["type"],
-        "fill_percent": round(100 * request["attendance"] / venue["capacity"]),
-        "duration_hours": round(hours, 1),
-        "submitted_at": request["created_at"],
-        # Empty means safe to approve.
-        "conflicts": find_conflicts(
-            data, request["venue_id"], request["start"], request["end"], exclude_id=request_id
-        ),
-        "same_day_schedule": same_day,
-        "requester_confirmed": sum(r["status"] == CONFIRMED for r in history),
-        "requester_rejected": sum(r["status"] == REJECTED for r in history),
-    }

@@ -5,34 +5,11 @@ import streamlit as st
 
 import rules
 from ui.components import (
-    STATUSES, datetime_inputs, flash_and_rerun, get_store, request_card, venue_picker, window,
+    STATUSES, cancel_controls, datetime_inputs, flash_and_rerun, get_store, request_card,
+    venue_picker, window,
 )
 
 BLOCK_REASONS = ["Maintenance", "Renovation", "Other operational restriction"]
-
-
-def _review_details(box, store, r):
-    """Decision aids shown on each pending request. Returns True if it is safe to approve."""
-    d = rules.review_details(store, r["id"])
-    m1, m2, m3, m4 = box.columns(4)
-    m1.metric("Venue capacity", d["capacity"], help=d["venue_type"])
-    m2.metric("Expected fill", f"{d['fill_percent']}%", help=f"{r['attendance']} of {d['capacity']} seats")
-    m3.metric("Duration", f"{d['duration_hours']} h")
-    m4.metric("Requester history", f"{d['requester_confirmed']} confirmed",
-              help=f"{d['requester_rejected']} rejected earlier")
-    box.caption(f"Submitted {d['submitted_at']}")
-    if d["conflicts"]:
-        box.warning("Cannot approve yet:\n" + "\n".join(f"- {c}" for c in d["conflicts"]))
-    else:
-        box.info("No clashes with other bookings or venue blocks.")
-    if d["same_day_schedule"]:
-        with box.expander(f"Other bookings at {r['venue_name']} around this date"):
-            st.dataframe(
-                [{"Type": row["kind"], "When": window(row), "Details": row["title"]}
-                 for row in d["same_day_schedule"]],
-                hide_index=True, width="stretch",
-            )
-    return not d["conflicts"]
 
 
 def page_review_queue(user):
@@ -40,13 +17,10 @@ def page_review_queue(user):
     st.header("Review queue")
     queue = rules.pending_queue(store)
     st.caption(f"{len(queue)} pending request(s), oldest first. Pending requests hold their venue slot.")
-    if not queue:
-        st.info("Nothing to review. New requests will appear here.")
     for r in queue:
         box = request_card(r, show_requester=True)
-        can_approve = _review_details(box, store, r)
         c1, c2, c3 = box.columns([1, 3, 1])
-        if c1.button("Approve", key=f"approve_{r['id']}", disabled=not can_approve):
+        if c1.button("Approve", key=f"approve_{r['id']}"):
             flash_and_rerun(rules.approve(store, user["id"], r["id"]))
         reason = c2.text_input("Rejection reason", key=f"reject_reason_{r['id']}",
                                label_visibility="collapsed", placeholder="Rejection reason (required)")
@@ -55,36 +29,15 @@ def page_review_queue(user):
 
 
 def page_all_events(user):
-    store = get_store()
     st.header("All requests and events")
-    c1, c2 = st.columns([3, 2])
-    text = c1.text_input("Search", key="all_search", placeholder="Title, venue, requester, type or #id")
-    statuses = c2.multiselect("Status", STATUSES, default=STATUSES, key="all_status",
+    statuses = st.multiselect("Status", STATUSES, default=[rules.PENDING, rules.CONFIRMED],
                               format_func=str.title)
-    rows = rules.search_requests(store, text, statuses)
-    st.caption(f"{len(rows)} request(s) shown.")
-    if not rows:
-        st.info("No requests match the search and status filter.")
-        return
-    # st.dataframe is read-only and has no row selection unless asked for.
-    st.dataframe(
-        [{"#": r["id"], "Event": r["title"], "Type": r["event_type"], "Venue": r["venue_name"],
-          "When": window(r), "Attendees": r["attendance"], "Requested by": r["requester_name"],
-          "Status": r["status"].title(), "Reason": r["decision_reason"] or ""}
-         for r in rows],
-        hide_index=True, width="stretch",
-    )
-
-    confirmed = {r["id"]: r for r in rows if r["status"] == rules.CONFIRMED}
-    if confirmed:
-        with st.expander("Cancel a confirmed event"):
-            event_id = st.selectbox(
-                "Event", list(confirmed), key="cancel_event",
-                format_func=lambda i: f"#{i} {confirmed[i]['title']} · {window(confirmed[i])}",
-            )
-            reason = st.text_input("Cancellation reason (optional)", key="cancel_reason")
-            if st.button("Cancel event", key="cancel_selected"):
-                flash_and_rerun(rules.cancel(store, user["id"], event_id, reason))
+    for r in rules.list_requests(get_store()):
+        if r["status"] not in statuses:
+            continue
+        box = request_card(r, show_requester=True)
+        if r["status"] == rules.CONFIRMED:
+            cancel_controls(box, user, r)
 
 
 def page_venue_blocks(user):
