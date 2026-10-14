@@ -107,7 +107,7 @@ def test_request_right_after_block_is_allowed(submit):
 def test_multi_day_request_spanning_a_block_is_blocked(submit):
     res = submit(venue=CONF_C, start="2026-08-03 12:00", end="2026-08-05 12:00", attendance=20)
     assert not res.ok
-    assert "Renovation" in res.message
+    assert "Conference Room C is unavailable (Renovation)" in res.message
 
 
 def test_attendance_equal_to_capacity_is_allowed(submit):

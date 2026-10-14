@@ -45,7 +45,7 @@ def add_block(store, user_id, venue_id, start, end, reason):
         }
         data["blocks"].append(block)
         log.info("user=%s added block #%s on venue %s", user["name"], block["id"], venue_id)
-        return Result(True, f"Venue blocked for {describe_window(start_s, end_s)}.", block["id"])
+        return Result(True, f"{venue['name']} blocked for {describe_window(start_s, end_s)}.", block["id"])
 
 
 def remove_block(store, user_id, block_id):

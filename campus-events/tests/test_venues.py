@@ -110,5 +110,5 @@ def test_overlapping_block_is_refused(store):
     assert rules.add_block(*args).ok
     second = rules.add_block(*args)
     assert not second.ok
-    assert "Maintenance" in second.message
+    assert "Central Amphitheatre is unavailable (Maintenance)" in second.message
     assert len(rules.list_blocks(store, venue_id=AMPHI)) == 1

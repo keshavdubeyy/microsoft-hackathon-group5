@@ -45,8 +45,10 @@ def booking_conflicts(data, venue_id, start, end, exclude_id=None):
 
 def block_conflicts(data, venue_id, start, end):
     """Reasons why venue blocks (maintenance, renovation...) clash with this window."""
+    venue = find(data["venues"], venue_id)
+    name = venue["name"] if venue else "Venue"
     return [
-        f"Venue is unavailable ({b['reason']}) on {describe_window(b['start'], b['end'])}."
+        f"{name} is unavailable ({b['reason']}) on {describe_window(b['start'], b['end'])}."
         for b in data["blocks"]
         if b["venue_id"] == venue_id and overlaps(start, end, b["start"], b["end"])
     ]
