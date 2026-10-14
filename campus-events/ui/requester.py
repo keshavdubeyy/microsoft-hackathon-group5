@@ -46,6 +46,11 @@ def page_my_requests(user):
     if not requests:
         st.info("You have not submitted any requests yet. Use **New request** in the sidebar to book a venue.")
         return
+
+    # Status summary, so the requester sees at a glance what needs attention.
+    for col, status in zip(st.columns(len(STATUSES)), STATUSES):
+        col.metric(status.title(), sum(r["status"] == status for r in requests))
+
     for r in requests:
         box = request_card(r)
         if r["status"] == rules.CONFIRMED:
