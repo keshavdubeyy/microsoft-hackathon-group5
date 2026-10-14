@@ -1,2 +1,2 @@
-streamlit
-pytest
+streamlit==1.65.0
+pytest==9.1.1
