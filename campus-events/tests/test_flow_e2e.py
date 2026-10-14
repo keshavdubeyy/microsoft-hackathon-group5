@@ -111,11 +111,14 @@ def test_reject_needs_reason_then_works(store, status_of):
     rules.submit_request(store, 3, "Club Meetup", "Club Activity", AUDITORIUM,
                          "2026-08-05 15:00", "2026-08-05 16:00", 40)
     at = open_app("admin", "Review queue")
-    at.button(key="reject_3").click().run()
-    assert "reason is required" in at.error[0].value
+    assert at.button(key="reject_3").disabled  # cannot reject without a reason
     assert status_of(3) == rules.PENDING
 
+    at.text_input(key="reject_reason_3").input("   ").run()
+    assert at.button(key="reject_3").disabled  # blanks do not count
+
     at.text_input(key="reject_reason_3").input("Auditorium reserved for exams").run()
+    assert not at.button(key="reject_3").disabled
     at.button(key="reject_3").click().run()
     assert "rejected" in at.success[0].value
     assert status_of(3) == rules.REJECTED

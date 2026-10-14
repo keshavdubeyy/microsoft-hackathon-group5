@@ -50,8 +50,12 @@ def page_review_queue(user):
         if c1.button("Approve", key=f"approve_{r['id']}", disabled=not can_approve):
             flash_and_rerun(rules.approve(store, user["id"], r["id"]))
         reason = c2.text_input("Rejection reason", key=f"reject_reason_{r['id']}",
-                               label_visibility="collapsed", placeholder="Rejection reason (required)")
-        if c3.button("Reject", key=f"reject_{r['id']}"):
+                               label_visibility="collapsed",
+                               placeholder="Rejection reason (required to reject)")
+        # Reject stays disabled until a reason is typed (press Enter to apply it);
+        # rules.reject still refuses an empty reason as the real safeguard.
+        if c3.button("Reject", key=f"reject_{r['id']}", disabled=not reason.strip(),
+                     help="Enter a rejection reason first" if not reason.strip() else None):
             flash_and_rerun(rules.reject(store, user["id"], r["id"], reason))
 
 
