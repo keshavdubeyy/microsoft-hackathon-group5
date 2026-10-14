@@ -14,7 +14,7 @@ def page_new_request(user):
     st.caption("Checks run as you type; a request that would fail cannot be submitted.")
     # Bumping the version gives the widgets fresh keys, clearing the form after a submit.
     v = st.session_state.setdefault("form_version", 0)
-    title = st.text_input("Event title", key=f"title_{v}")
+    title = st.text_input("Event title", key=f"title_{v}", max_chars=rules.TITLE_MAX)
     c1, c2, c3 = st.columns([2, 3, 1])
     event_type = c1.selectbox("Event type", rules.EVENT_TYPES, key=f"type_{v}")
     venue = venue_picker(c2, f"venue_{v}")

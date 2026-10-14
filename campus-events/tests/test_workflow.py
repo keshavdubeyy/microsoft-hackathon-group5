@@ -231,3 +231,21 @@ def test_get_user_hides_password_hash(store):
     user = rules.get_user(store, ASHA)
     assert user["name"] == "Asha" and "password_hash" not in user
     assert rules.get_user(store, UNKNOWN_USER) is None
+
+
+# ---- reason limits
+
+def test_rejection_reason_is_limited_to_one_short_line(store, submit, status_of):
+    res = submit()
+    too_long = rules.reject(store, ADMIN, res.id, "x" * (rules.REASON_MAX + 1))
+    assert not too_long.ok and "at most 200 characters" in too_long.message
+    assert not rules.reject(store, ADMIN, res.id, "Clashes\nwith exams").ok
+    assert status_of(res.id) == rules.PENDING
+    assert rules.reject(store, ADMIN, res.id, "x" * rules.REASON_MAX).ok
+
+
+def test_cancellation_reason_is_optional_but_limited(store, status_of):
+    assert not rules.cancel(store, ADMIN, LAB_EVENT, "x" * (rules.REASON_MAX + 1)).ok
+    assert status_of(LAB_EVENT) == rules.CONFIRMED
+    assert rules.cancel(store, ADMIN, LAB_EVENT, "   ").ok  # blank = no reason
+    assert _request(store, LAB_EVENT)["decision_reason"] is None

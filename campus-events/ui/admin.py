@@ -23,7 +23,8 @@ def page_review_queue(user):
         if c1.button("Approve", key=f"approve_{r['id']}"):
             flash_and_rerun(rules.approve(store, user["id"], r["id"]))
         reason = c2.text_input("Rejection reason", key=f"reject_reason_{r['id']}",
-                               label_visibility="collapsed", placeholder="Rejection reason (required)")
+                               label_visibility="collapsed", placeholder="Rejection reason (required)",
+                               max_chars=rules.REASON_MAX)
         if c3.button("Reject", key=f"reject_{r['id']}"):
             flash_and_rerun(rules.reject(store, user["id"], r["id"], reason))
 
@@ -49,7 +50,9 @@ def page_venue_blocks(user):
         c1, c2, c3 = st.columns([2, 1, 2])
         venue = venue_picker(c1, "block_venue")
         kind = c2.selectbox("Reason", BLOCK_REASONS, key="block_kind")
-        note = c3.text_input("Details (optional)", key="block_note")
+        longest_kind = max(len(k) for k in BLOCK_REASONS) + len(": ")
+        note = c3.text_input("Details (optional)", key="block_note",
+                             max_chars=rules.BLOCK_REASON_MAX - longest_kind)
         start, end = datetime_inputs("block", time(9, 0), time(18, 0))
         if st.button("Add block", type="primary"):
             reason = f"{kind}: {note.strip()}" if note.strip() else kind

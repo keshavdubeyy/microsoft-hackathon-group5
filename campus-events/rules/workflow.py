@@ -5,9 +5,11 @@ from db import find, next_id, now
 from rules.models import (
     CANCELLED, CONFIRMED, PENDING, REJECTED, REQUESTER, TRANSITIONS, Result, failure,
 )
-from rules.validation import check_request, find_conflicts
+from rules.validation import check_request, find_conflicts, text_field
 
 log = logging.getLogger("rules")
+
+REASON_MAX = 200  # rejection and cancellation reasons
 
 
 def submit_request(store, user_id, title, event_type, venue_id, start, end, attendance):
@@ -99,17 +101,25 @@ def approve(store, user_id, request_id):
 
 def reject(store, user_id, request_id, reason):
     """PENDING -> REJECTED. A reason is mandatory; the slot is released."""
-    reason = str(reason or "").strip()
     with store.transaction() as data:
         refused = _refusal(data, user_id, request_id, REJECTED)
         if refused is not None:
             return refused
-        if not reason:
-            return Result(False, "A rejection reason is required.")
+        problems, reason = text_field(reason, "A rejection reason", REASON_MAX)
+        if problems:
+            return Result(False, problems[0])
         return _transition(data, user_id, request_id, REJECTED, reason)
 
 
 def cancel(store, user_id, request_id, reason=None):
     """CONFIRMED -> CANCELLED. Requester (own event) or Admin; the slot is released."""
     with store.transaction() as data:
-        return _transition(data, user_id, request_id, CANCELLED, str(reason or "").strip() or None)
+        refused = _refusal(data, user_id, request_id, CANCELLED)
+        if refused is not None:
+            return refused
+        reason = str(reason or "").strip() or None  # optional
+        if reason:
+            problems, reason = text_field(reason, "Cancellation reason", REASON_MAX)
+            if problems:
+                return Result(False, problems[0])
+        return _transition(data, user_id, request_id, CANCELLED, reason)

@@ -88,7 +88,8 @@ def request_card(r, show_requester=False):
 def cancel_controls(box, user, r):
     c1, c2 = box.columns([4, 1])
     reason = c1.text_input("Cancellation reason (optional)", key=f"cancel_reason_{r['id']}",
-                           label_visibility="collapsed", placeholder="Cancellation reason (optional)")
+                           label_visibility="collapsed", placeholder="Cancellation reason (optional)",
+                           max_chars=rules.REASON_MAX)
     if c2.button("Cancel event", key=f"cancel_{r['id']}"):
         flash_and_rerun(rules.cancel(get_store(), user["id"], r["id"], reason))
 
