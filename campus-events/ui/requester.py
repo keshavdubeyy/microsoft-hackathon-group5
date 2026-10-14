@@ -43,6 +43,9 @@ def page_new_request(user):
 def page_my_requests(user):
     st.header("My requests")
     requests = rules.list_requests(get_store(), requester_id=user["id"])
+    if not requests:
+        st.info("You have not submitted any requests yet. Use **New request** in the sidebar to book a venue.")
+        return
     for r in requests:
         box = request_card(r)
         if r["status"] == rules.CONFIRMED:
