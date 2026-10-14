@@ -28,7 +28,6 @@ APP_CSS = """
   border: 1px solid var(--color-hairline); border-radius: var(--radius-tags);
   font-size: var(--text-caption); font-weight: var(--font-weight-medium); color: var(--color-graphite);
 }
-.ce-chip--new { background: var(--color-obsidian); border-color: var(--color-obsidian); color: var(--color-paper); margin-left: var(--spacing-8, 8px); }
 .ce-chip--confirmed { color: var(--color-obsidian); }
 .ce-chip--rejected, .ce-chip--cancelled { color: var(--color-smoke); }
 

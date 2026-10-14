@@ -62,10 +62,7 @@ def request_card(r, show_requester=False):
     left.markdown(f"**#{r['id']} {r['title']}** · {r['event_type']}")
     who = f" · requested by {r['requester_name']}" if show_requester else ""
     left.caption(f"{r['venue_name']} · {window(r)} · {r['attendance']} attendees{who}")
-    badges = chip(r["status"].title(), r["status"].lower())
-    if r.get("is_new"):
-        badges += chip("New", "new")
-    right.markdown(badges, unsafe_allow_html=True)
+    right.markdown(chip(r["status"].title(), r["status"].lower()), unsafe_allow_html=True)
     if r["decision_reason"]:
         box.caption(f"Reason: {r['decision_reason']}")
     return box
