@@ -89,7 +89,6 @@ def test_live_check_matches_submit(store):
     assert len(reasons) == 1 and "AI Workshop" in reasons[0]
 
 
-<<<<<<< HEAD
 def test_successful_submit_is_saved_as_pending(submit, request_by_id):
     res = submit(title="  Spaced Title  ")
     assert res.ok, res.message
@@ -98,7 +97,8 @@ def test_successful_submit_is_saved_as_pending(submit, request_by_id):
     assert saved["title"] == "Spaced Title"  # surrounding whitespace is trimmed
     assert saved["venue_name"] == "Main Auditorium"
     assert saved["requester_name"] == "Asha"
-=======
+
+
 # ---- Overlap rule (FR-05, A1): new_start < existing_end AND new_end > existing_start
 
 @pytest.mark.parametrize("start,end,expected", [
@@ -130,14 +130,11 @@ def test_multi_day_request_spanning_a_block_is_blocked(submit):
     res = submit(venue=CONF_C, start="2026-08-03 12:00", end="2026-08-05 12:00", attendance=20)
     assert not res.ok
     assert "Conference Room C is unavailable (Renovation)" in res.message
->>>>>>> 9d7cef60621ac7a907de83dd34dce0f27a0280b5
 
 
 def test_attendance_equal_to_capacity_is_allowed(submit):
     res = submit(venue=INNOV_LAB, start="2026-08-07 10:00", end="2026-08-07 12:00", attendance=60)
     assert res.ok, res.message
-<<<<<<< HEAD
-=======
 
 
 def test_zero_length_event_is_blocked(submit):
@@ -159,4 +156,3 @@ def test_unknown_event_type_is_blocked(submit):
     res = submit(event_type="Wedding")
     assert not res.ok
     assert "Event type must be one of" in res.message
->>>>>>> 9d7cef60621ac7a907de83dd34dce0f27a0280b5
