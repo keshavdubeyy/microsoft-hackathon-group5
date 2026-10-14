@@ -56,9 +56,25 @@ def account_panel(store, user):
     if st.sidebar.button("Log out"):
         st.session_state.pop("user_id", None)
         st.rerun()
-    if user["role"] == rules.ADMIN and st.sidebar.button("Reset demo data"):
-        store.reset()
-        flash_and_rerun(rules.Result(True, "Demo data reset to the initial campus data."))
+    if user["role"] == rules.ADMIN:
+        reset_controls(store, user)
+
+
+def reset_controls(store, user):
+    """Two-step reset, so one stray click cannot wipe the demo data."""
+    if not st.session_state.get("confirm_reset"):
+        if st.sidebar.button("Reset demo data"):
+            st.session_state["confirm_reset"] = True
+            st.rerun()
+        return
+    st.sidebar.warning("This deletes every request and block added since the start. Reset?")
+    c1, c2 = st.sidebar.columns(2)
+    if c1.button("Yes, reset", type="primary"):
+        st.session_state.pop("confirm_reset", None)
+        flash_and_rerun(rules.reset_demo_data(store, user["id"]))
+    if c2.button("Keep data"):
+        st.session_state.pop("confirm_reset", None)
+        st.rerun()
 
 
 def main():

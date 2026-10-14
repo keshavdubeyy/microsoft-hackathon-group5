@@ -12,3 +12,8 @@ buttonRadius = "full"
 
 [browser]
 gatherUsageStats = false
+
+[server]
+# Local only. The demo logins are public in the README, so the app must not be
+# reachable from other machines on the network.
+address = "localhost"
