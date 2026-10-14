@@ -10,6 +10,15 @@ import streamlit as st
 _DIR = Path(__file__).resolve().parent.parent / "design-system"
 
 APP_CSS = """
+/* The design system sets font-family on every [class*="st-"] element, which also hits
+   Streamlit's icon spans (dropdown/expander arrows, sidebar toggle) and turns their glyph
+   names into plain text. Give icons their font back. */
+[data-testid="stIconMaterial"], .material-icons, .material-symbols-rounded {
+  font-family: "Material Symbols Rounded" !important;
+  font-weight: normal; letter-spacing: normal; text-transform: none;
+  -webkit-font-feature-settings: "liga"; font-feature-settings: "liga";
+}
+
 /* Brand line in the sidebar (h1 is display-size, too big there) */
 .ce-brand { font-size: var(--text-subheading); font-weight: var(--font-weight-medium); margin: 0; }
 

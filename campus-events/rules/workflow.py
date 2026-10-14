@@ -24,7 +24,7 @@ def submit_request(store, user_id, title, event_type, venue_id, start, end, atte
         ts = now()
         request = {
             "id": next_id(data["requests"]),
-            "title": title.strip(),
+            "title": str(title).strip(),
             "event_type": event_type,
             "requester_id": user_id,
             "venue_id": venue_id,
@@ -42,8 +42,8 @@ def submit_request(store, user_id, title, event_type, venue_id, start, end, atte
         return Result(True, f"Request #{request['id']} submitted and is pending review.", request["id"])
 
 
-def _transition(data, user_id, request_id, to_status, reason=None):
-    """The single place where a request's status changes."""
+def _refusal(data, user_id, request_id, to_status):
+    """Why this user may not move this request to to_status, or None if allowed."""
     user = find(data["users"], user_id)
     request = find(data["requests"], request_id)
     if user is None:
@@ -61,7 +61,18 @@ def _transition(data, user_id, request_id, to_status, reason=None):
         return Result(False, f"A {user['role'].lower()} is not allowed to do this.")
     if user["role"] == REQUESTER and request["requester_id"] != user_id:
         return Result(False, "You can only cancel your own events.")
+    return None
 
+
+def _transition(data, user_id, request_id, to_status, reason=None):
+    """The single place where a request's status changes."""
+    refused = _refusal(data, user_id, request_id, to_status)
+    if refused is not None:
+        return refused
+
+    user = find(data["users"], user_id)
+    request = find(data["requests"], request_id)
+    from_status = request["status"]
     request["status"] = to_status
     request["decision_reason"] = reason
     request["decided_by"] = user_id
@@ -71,27 +82,34 @@ def _transition(data, user_id, request_id, to_status, reason=None):
 
 
 def approve(store, user_id, request_id):
-    """PENDING -> CONFIRMED. Re-checks conflicts as a safety net."""
+    """PENDING -> CONFIRMED. Checks the role first, then re-checks conflicts as a safety net."""
     with store.transaction() as data:
+        refused = _refusal(data, user_id, request_id, CONFIRMED)
+        if refused is not None:
+            return refused
+
         request = find(data["requests"], request_id)
-        if request and request["status"] == PENDING:
-            reasons = find_conflicts(
-                data, request["venue_id"], request["start"], request["end"], exclude_id=request_id
-            )
-            if reasons:
-                return failure("Cannot approve:", reasons)
+        reasons = find_conflicts(
+            data, request["venue_id"], request["start"], request["end"], exclude_id=request_id
+        )
+        if reasons:
+            return failure("Cannot approve:", reasons)
         return _transition(data, user_id, request_id, CONFIRMED)
 
 
 def reject(store, user_id, request_id, reason):
     """PENDING -> REJECTED. A reason is mandatory; the slot is released."""
-    if not str(reason or "").strip():
-        return Result(False, "A rejection reason is required.")
+    reason = str(reason or "").strip()
     with store.transaction() as data:
-        return _transition(data, user_id, request_id, REJECTED, reason.strip())
+        refused = _refusal(data, user_id, request_id, REJECTED)
+        if refused is not None:
+            return refused
+        if not reason:
+            return Result(False, "A rejection reason is required.")
+        return _transition(data, user_id, request_id, REJECTED, reason)
 
 
 def cancel(store, user_id, request_id, reason=None):
     """CONFIRMED -> CANCELLED. Requester (own event) or Admin; the slot is released."""
     with store.transaction() as data:
-        return _transition(data, user_id, request_id, CANCELLED, (reason or "").strip() or None)
+        return _transition(data, user_id, request_id, CANCELLED, str(reason or "").strip() or None)

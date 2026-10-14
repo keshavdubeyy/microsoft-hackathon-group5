@@ -1,4 +1,7 @@
-"""Small lookup helpers over the in-memory data (lists of dicts)."""
+"""Small lookup helpers over the in-memory data (lists of dicts).
+
+List/filter queries used by the UI live in rules/queries.py, not here.
+"""
 from datetime import datetime
 
 

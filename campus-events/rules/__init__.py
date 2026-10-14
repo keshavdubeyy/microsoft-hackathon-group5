@@ -10,7 +10,7 @@ from rules.models import (
 )
 from rules.queries import (
     authenticate, get_user, list_blocks, list_requests, list_users, list_venues,
-    pending_queue, venue_schedule,
+    pending_queue, review_details, search_requests, venue_schedule,
 )
 from rules.validation import find_conflicts, overlaps, validate_request
 from rules.venues import add_block, remove_block
