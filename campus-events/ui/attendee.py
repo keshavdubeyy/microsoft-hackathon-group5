@@ -11,3 +11,5 @@ def page_upcoming_events(user):
 
 def page_venue_schedule(user):
     st.header("Venue schedule")
+    venue = venue_picker(st, "schedule_venue")
+    render_schedule(venue["id"])
