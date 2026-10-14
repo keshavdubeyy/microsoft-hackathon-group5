@@ -63,22 +63,3 @@ def test_all_events_cancel_from_expander(demo, status_of):
     at.selectbox(key="cancel_event").set_value(7).run()
     button(at, "Cancel event").click().run()
     assert status_of(7) == rules.CANCELLED
-
-
-def test_confirmed_events_page_is_searchable(demo):
-    at = open_app(None, "Upcoming events")
-    assert len(at.dataframe[0].value) == 3  # AI Workshop, Python Coding Bootcamp, Inter-College Quiz
-    at.text_input(key="events_search").input("quiz").run()
-    assert at.dataframe[0].value["Event"].tolist() == ["Inter-College Quiz"]
-    at.text_input(key="events_search").input("zzz").run()
-    assert not at.dataframe and "match your search" in at.info[0].value
-
-
-def test_my_requests_search_only_covers_own_requests(demo):
-    at = open_app("asha", "My requests")
-    all_titles = [m.value for m in at.markdown if m.value.startswith("**#")]
-    assert len(all_titles) == 5  # Asha owns #1, #3, #5, #7, #9
-    at.text_input(key="my_search").input("robotics").run()
-    assert [m.value for m in at.markdown if m.value.startswith("**#")] == ["**#5 Robotics Club Demo** · Club Activity"]
-    at.text_input(key="my_search").input("ravi").run()  # Ravi's requests are not Asha's
-    assert "match the search" in at.info[0].value

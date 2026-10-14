@@ -76,10 +76,6 @@ def cancel_controls(box, user, r):
         flash_and_rerun(rules.cancel(get_store(), user["id"], r["id"], reason))
 
 
-def search_box(key, label="Search"):
-    return st.text_input(label, key=key, placeholder="Title, venue, type or #id")
-
-
 def render_schedule(venue_id):
     rows = rules.venue_schedule(get_store(), venue_id)
     if not rows:
