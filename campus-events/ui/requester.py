@@ -28,6 +28,17 @@ def page_new_request(user):
         st.info(f"{venue['name']} is available for "
                 f"{rules.describe_window(rules.to_dt_str(start), rules.to_dt_str(end))}.")
 
+    if st.button("Submit request", type="primary", disabled=bool(reasons)):
+        # submit_request re-validates against the saved data, so a slot taken
+        # by someone else since the check above is still refused.
+        result = rules.submit_request(store, user["id"], title, event_type, venue["id"], start, end, attendance)
+        if result.ok:
+            st.session_state["form_version"] = v + 1
+        flash_and_rerun(result)
+
+    with st.expander(f"Current schedule for {venue['name']}"):
+        render_schedule(venue["id"])
+
 
 def page_my_requests(user):
     st.header("My requests")
