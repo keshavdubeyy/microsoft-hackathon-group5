@@ -1,3 +1,4 @@
+data/
 events.db
 __pycache__/
 .venv/

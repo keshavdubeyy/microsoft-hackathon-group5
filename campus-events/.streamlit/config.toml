@@ -5,3 +5,10 @@ backgroundColor = "#ffffff"
 secondaryBackgroundColor = "#f1f1f1"
 textColor = "#000000"
 font = "sans serif"
+# Design system: hairline borders, 6px cards, pill buttons
+borderColor = "#0000001f"
+baseRadius = "6px"
+buttonRadius = "full"
+
+[browser]
+gatherUsageStats = false
