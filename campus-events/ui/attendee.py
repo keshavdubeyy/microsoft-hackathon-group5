@@ -7,6 +7,16 @@ from ui.components import get_store, render_schedule, search_box, venue_picker, 
 
 def page_upcoming_events(user):
     st.header("Confirmed events")
+    text = search_box("events_search")
+    events = rules.search_requests(get_store(), text, [rules.CONFIRMED])
+    if not events:
+        st.info("No confirmed events match your search." if text.strip() else "No confirmed events yet.")
+        return
+    st.dataframe(
+        [{"Event": e["title"], "Type": e["event_type"], "Venue": e["venue_name"], "When": window(e)}
+         for e in events],
+        hide_index=True, width="stretch",
+    )
 
 
 def page_venue_schedule(user):
