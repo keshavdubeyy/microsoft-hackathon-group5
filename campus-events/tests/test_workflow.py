@@ -7,8 +7,19 @@ import rules
 from db import Store
 
 ADMIN, ASHA, RAVI, UNKNOWN_USER = 1, 2, 3, 99
-AMPHI, INNOV_LAB = 4, 5
+MAIN_AUD, AMPHI, INNOV_LAB = 2, 4, 5
 SEMINAR_EVENT, LAB_EVENT = 1, 2  # seeded confirmed events (Asha, Ravi)
+
+
+def _request(store, request_id):
+    return next(r for r in rules.list_requests(store) if r["id"] == request_id)
+
+
+def _add_block_directly(store):
+    """A clash that appears after submission, bypassing add_block's own checks."""
+    with store.transaction() as data:
+        data["blocks"].append({"id": 99, "venue_id": MAIN_AUD, "start": "2026-08-05 09:00",
+                               "end": "2026-08-05 11:00", "reason": "Maintenance", "created_by": ADMIN})
 
 
 # ---- T7-T8: pending holds the slot; rejection releases it
@@ -67,6 +78,82 @@ def test_admin_cancels_any_event_and_slot_frees(store, submit):
 def test_only_requesters_submit(submit):
     assert not submit(user=ADMIN).ok
     assert not submit(user=UNKNOWN_USER).ok
+
+
+# ---- approve and its safety net
+
+def test_admin_approves_and_confirmed_event_holds_slot(store, submit, status_of):
+    res = submit()
+    assert rules.approve(store, ADMIN, res.id).ok
+    assert status_of(res.id) == rules.CONFIRMED
+    second = submit(user=RAVI)
+    assert not second.ok
+    assert "confirmed event" in second.message
+
+
+def test_approve_rechecks_conflicts(store, submit, status_of):
+    res = submit()
+    _add_block_directly(store)
+    result = rules.approve(store, ADMIN, res.id)
+    assert not result.ok
+    assert "Maintenance" in result.message
+    assert status_of(res.id) == rules.PENDING
+
+
+def test_role_is_checked_before_conflicts_and_reason(store, submit):
+    res = submit()
+    _add_block_directly(store)
+    assert "requester is not allowed" in rules.approve(store, RAVI, res.id).message
+    assert "requester is not allowed" in rules.reject(store, RAVI, res.id, "").message
+
+
+# ---- invalid transitions and bad input
+
+def test_repeat_transitions_refused(store, status_of):
+    assert "Cannot change a confirmed request" in rules.approve(store, ADMIN, SEMINAR_EVENT).message
+    assert "Cannot change a confirmed request" in rules.reject(store, ADMIN, SEMINAR_EVENT, "Late").message
+    assert rules.cancel(store, ADMIN, SEMINAR_EVENT).ok
+    assert "Cannot change a cancelled request" in rules.cancel(store, ADMIN, SEMINAR_EVENT).message
+    assert status_of(SEMINAR_EVENT) == rules.CANCELLED
+
+
+def test_unknown_request_or_user_refused(store):
+    for res in (rules.approve(store, ADMIN, 999),
+                rules.reject(store, ADMIN, 999, "No"),
+                rules.cancel(store, ADMIN, 999)):
+        assert not res.ok
+        assert "does not exist" in res.message
+    assert rules.approve(store, UNKNOWN_USER, SEMINAR_EVENT).message == "Unknown user."
+
+
+def test_refused_transitions_leave_file_untouched(store, submit):
+    res = submit()
+    with open(store.path, encoding="utf-8") as f:
+        before = f.read()
+    rules.approve(store, ASHA, res.id)          # wrong role
+    rules.reject(store, ADMIN, res.id, "  ")    # no reason
+    rules.cancel(store, ASHA, res.id)           # pending cannot be cancelled
+    rules.cancel(store, RAVI, SEMINAR_EVENT)    # not Ravi's event
+    with open(store.path, encoding="utf-8") as f:
+        assert f.read() == before
+
+
+def test_decision_reason_and_decider_recorded(store, submit):
+    res = submit()
+    rules.reject(store, ADMIN, res.id, " Clashes with exams ")
+    rules.cancel(store, ADMIN, LAB_EVENT, "  Speaker unavailable ")
+    rejected, cancelled = _request(store, res.id), _request(store, LAB_EVENT)
+    assert (rejected["decision_reason"], rejected["decided_by"]) == ("Clashes with exams", ADMIN)
+    assert (cancelled["decision_reason"], cancelled["decided_by"]) == ("Speaker unavailable", ADMIN)
+
+
+def test_non_text_title_and_reasons_do_not_crash(store, submit):
+    res = submit(title=2026)
+    assert res.ok, res.message
+    assert _request(store, res.id)["title"] == "2026"
+    assert rules.reject(store, ADMIN, res.id, 404).ok
+    assert _request(store, res.id)["decision_reason"] == "404"
+    assert rules.cancel(store, ADMIN, LAB_EVENT, 7).ok
 
 
 # ---- staff login
