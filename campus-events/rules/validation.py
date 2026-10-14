@@ -11,6 +11,21 @@ def overlaps(start_a, end_a, start_b, end_b):
     return start_a < end_b and end_a > start_b
 
 
+def parse_window(start, end):
+    """Normalise a start/end pair. Returns (reasons, start_str, end_str).
+
+    Shared by requests and venue blocks so both apply the same time rules.
+    On a format error both strings are None.
+    """
+    try:
+        start_s, end_s = to_dt_str(start), to_dt_str(end)
+    except ValueError:
+        return ["Start and end must be valid date-times (YYYY-MM-DD HH:MM)."], None, None
+    if end_s <= start_s:
+        return ["End date-time must be after start date-time."], start_s, end_s
+    return [], start_s, end_s
+
+
 def booking_conflicts(data, venue_id, start, end, exclude_id=None):
     """Reasons why PENDING/CONFIRMED requests clash with this window."""
     reasons = []
@@ -65,15 +80,9 @@ def check_request(data, title, event_type, venue_id, start, end, attendance):
             f"Expected attendance {attendance} exceeds {venue['name']} capacity of {venue['capacity']}."
         )
 
-    try:
-        start_s, end_s = to_dt_str(start), to_dt_str(end)
-    except ValueError:
-        reasons.append("Start and end must be valid date-times (YYYY-MM-DD HH:MM).")
-        return reasons, None, None
-
-    if end_s <= start_s:
-        reasons.append("End date-time must be after start date-time.")
-    elif venue:
+    time_reasons, start_s, end_s = parse_window(start, end)
+    reasons.extend(time_reasons)
+    if venue and not time_reasons:
         reasons.extend(find_conflicts(data, venue_id, start_s, end_s))
     return reasons, start_s, end_s
 

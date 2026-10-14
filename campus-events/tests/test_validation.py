@@ -75,3 +75,62 @@ def test_live_check_matches_submit(store):
     reasons = rules.validate_request(store, "Talk", "Hackathon", SEMINAR_A,
                                      "2026-08-04 11:00", "2026-08-04 13:00", 50)
     assert len(reasons) == 1 and "AI Workshop" in reasons[0]
+
+
+# ---- Overlap rule (FR-05, A1): new_start < existing_end AND new_end > existing_start
+
+@pytest.mark.parametrize("start,end,expected", [
+    ("10:00", "12:00", True),   # exact same slot
+    ("10:30", "11:30", True),   # inside the existing booking
+    ("09:00", "13:00", True),   # contains the existing booking
+    ("09:00", "10:30", True),   # partial overlap on the left
+    ("11:30", "13:00", True),   # partial overlap on the right
+    ("08:00", "10:00", False),  # back-to-back before
+    ("12:00", "14:00", False),  # back-to-back after
+    ("13:00", "14:00", False),  # clearly apart
+])
+def test_overlap_rule(start, end, expected):
+    day = "2026-08-04 "
+    assert rules.overlaps(day + start, day + end, day + "10:00", day + "12:00") is expected
+
+
+def test_same_time_at_another_venue_is_allowed(submit):
+    res = submit(venue=2, start="2026-08-04 10:00", end="2026-08-04 12:00")  # Main Auditorium
+    assert res.ok, res.message
+
+
+def test_request_right_after_block_is_allowed(submit):
+    res = submit(venue=CONF_C, start="2026-08-04 18:00", end="2026-08-04 19:00", attendance=20)
+    assert res.ok, res.message
+
+
+def test_multi_day_request_spanning_a_block_is_blocked(submit):
+    res = submit(venue=CONF_C, start="2026-08-03 12:00", end="2026-08-05 12:00", attendance=20)
+    assert not res.ok
+    assert "Renovation" in res.message
+
+
+def test_attendance_equal_to_capacity_is_allowed(submit):
+    res = submit(venue=INNOV_LAB, start="2026-08-07 10:00", end="2026-08-07 12:00", attendance=60)
+    assert res.ok, res.message
+
+
+def test_zero_length_event_is_blocked(submit):
+    res = submit(start="2026-08-05 10:00", end="2026-08-05 10:00")
+    assert not res.ok
+    assert "End date-time must be after start" in res.message
+
+
+def test_every_conflict_is_listed(store, submit):
+    assert submit(venue=SEMINAR_A, start="2026-08-04 12:00", end="2026-08-04 14:00").ok
+    reasons = rules.validate_request(store, "Day-long fest", "Cultural Programme", SEMINAR_A,
+                                     "2026-08-04 09:00", "2026-08-04 18:00", 100)
+    assert len(reasons) == 2
+    assert any("confirmed event 'AI Workshop'" in r for r in reasons)
+    assert any("pending request 'Test Event'" in r for r in reasons)
+
+
+def test_unknown_event_type_is_blocked(submit):
+    res = submit(event_type="Wedding")
+    assert not res.ok
+    assert "Event type must be one of" in res.message
