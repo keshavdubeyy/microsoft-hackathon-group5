@@ -1,6 +1,8 @@
 """Initial campus data from the brief, plus staff accounts.
 
 Reset the data file:  python -m db.seed --reset
+Stop the app first: this runs as a separate process, so the app's lock does
+not cover it. While the app is running, use Reset demo data in the sidebar.
 """
 import argparse
 
@@ -77,7 +79,8 @@ if __name__ == "__main__":
     from db.connection import Store
 
     parser = argparse.ArgumentParser(description="Manage the events JSON store.")
-    parser.add_argument("--reset", action="store_true", help="wipe and re-seed the data file")
+    parser.add_argument("--reset", action="store_true",
+                        help="wipe and re-seed the data file (stop the app first)")
     args = parser.parse_args()
     store = Store()
     if args.reset:
