@@ -15,6 +15,9 @@ import threading
 from contextlib import contextmanager
 from pathlib import Path
 
+# Top-level collections every data file must contain.
+REQUIRED_KEYS = ("users", "venues", "blocks", "requests")
+
 DEFAULT_PATH = str(Path(__file__).resolve().parent.parent / "data" / "events.json")
 
 # One lock per data file, shared by every Store object in this process,
@@ -63,8 +66,21 @@ class Store:
                 self._save(data)
 
     def _load(self):
-        with open(self.path, encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with open(self.path, encoding="utf-8") as f:
+                data = json.load(f)
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"Data file {self.path} is damaged ({e}). "
+                "Re-seed it with: python -m db.seed --reset"
+            ) from e
+        missing = [k for k in REQUIRED_KEYS if not isinstance(data, dict) or k not in data]
+        if missing:
+            raise ValueError(
+                f"Data file {self.path} is missing {', '.join(missing)}. "
+                "Re-seed it with: python -m db.seed --reset"
+            )
+        return data
 
     def _save(self, data):
         os.makedirs(os.path.dirname(self.path) or ".", exist_ok=True)
