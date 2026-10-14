@@ -2,14 +2,15 @@
 import streamlit as st
 
 import rules
-from ui.components import get_store, render_schedule, venue_picker, window
+from ui.components import get_store, render_schedule, search_box, venue_picker, window
 
 
 def page_upcoming_events(user):
     st.header("Confirmed events")
-    events = rules.list_requests(get_store(), status=rules.CONFIRMED)
+    text = search_box("events_search")
+    events = rules.search_requests(get_store(), text, [rules.CONFIRMED])
     if not events:
-        st.info("No confirmed events yet.")
+        st.info("No confirmed events match your search." if text.strip() else "No confirmed events yet.")
         return
     venue_names = sorted({e["venue_name"] for e in events})
     chosen = st.selectbox("Filter by venue", ["All venues"] + venue_names, key="events_venue_filter")

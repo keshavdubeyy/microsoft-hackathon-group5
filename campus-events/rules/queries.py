@@ -86,14 +86,15 @@ def venue_schedule(store, venue_id):
     return sorted(rows, key=lambda row: row["start"])
 
 
-def search_requests(store, text="", statuses=None):
+def search_requests(store, text="", statuses=None, requester_id=None):
     """Requests whose title, type, venue, requester or id contains `text` (case-insensitive).
 
     `statuses` limits the result to those statuses; None or empty means all.
+    `requester_id` limits it to one requester's own requests.
     """
     needle = str(text or "").strip().lower()
     rows = []
-    for r in list_requests(store):
+    for r in list_requests(store, requester_id=requester_id):
         if statuses and r["status"] not in statuses:
             continue
         haystack = " ".join(

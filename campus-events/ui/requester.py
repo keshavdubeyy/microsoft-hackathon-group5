@@ -4,7 +4,7 @@ import streamlit as st
 import rules
 from ui.components import (
     STATUSES, cancel_controls, datetime_inputs, flash_and_rerun, get_store, render_schedule,
-    request_card, venue_picker,
+    request_card, search_box, venue_picker,
 )
 
 
@@ -42,7 +42,8 @@ def page_new_request(user):
 
 def page_my_requests(user):
     st.header("My requests")
-    requests = rules.list_requests(get_store(), requester_id=user["id"])
+    store = get_store()
+    requests = rules.list_requests(store, requester_id=user["id"])
     if not requests:
         st.info("You have not submitted any requests yet. Use **New request** in the sidebar to book a venue.")
         return
@@ -51,10 +52,15 @@ def page_my_requests(user):
     for col, status in zip(st.columns(len(STATUSES)), STATUSES):
         col.metric(status.title(), sum(r["status"] == status for r in requests))
 
-    status = st.selectbox("Show", ["All"] + STATUSES, format_func=str.title, key="my_requests_status")
-    shown = [r for r in requests if status == "All" or r["status"] == status]
+    c1, c2 = st.columns([3, 1])
+    with c1:
+        text = search_box("my_search")
+    status = c2.selectbox("Show", ["All"] + STATUSES, format_func=str.title, key="my_requests_status")
+    shown = rules.search_requests(
+        store, text, None if status == "All" else [status], requester_id=user["id"]
+    )
     if not shown:
-        st.info(f"No {status.lower()} requests.")
+        st.info("None of your requests match the search and status filter.")
     for r in shown:
         box = request_card(r)
         if r["status"] == rules.CONFIRMED:
