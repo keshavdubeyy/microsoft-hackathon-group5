@@ -2,8 +2,8 @@
 import logging
 
 from db import find, next_id
-from rules.models import ADMIN, Result, describe_window, failure, to_dt_str
-from rules.validation import booking_conflicts
+from rules.models import ADMIN, Result, describe_window, failure
+from rules.validation import booking_conflicts, parse_window
 
 log = logging.getLogger("rules")
 
@@ -20,14 +20,9 @@ def add_block(store, user_id, venue_id, start, end, reason):
             reasons.append("Selected venue does not exist.")
         if not str(reason or "").strip():
             reasons.append("A block reason is required (e.g. Maintenance, Renovation).")
-        try:
-            start_s, end_s = to_dt_str(start), to_dt_str(end)
-        except ValueError:
-            reasons.append("Start and end must be valid date-times (YYYY-MM-DD HH:MM).")
-            return failure("Block cannot be added:", reasons)
-        if end_s <= start_s:
-            reasons.append("End date-time must be after start date-time.")
-        elif not reasons:
+        time_reasons, start_s, end_s = parse_window(start, end)
+        reasons.extend(time_reasons)
+        if not reasons:
             # A7: never cancel bookings silently; the admin resolves them first.
             reasons.extend(booking_conflicts(data, venue_id, start_s, end_s))
         if reasons:
