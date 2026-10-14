@@ -57,6 +57,7 @@ streamlit run app.py              # opens http://localhost:8501
 | Run the app | `streamlit run app.py` |
 | Run all tests | `python -m pytest -q` |
 | Reset data to the initial campus data | `python -m db.seed --reset` (or **Reset demo data** in the sidebar as Admin) |
+| Reset and add extra pending, rejected and cancelled requests to review | `python -m db.seed --reset --demo` |
 | Use a different data file | set `EVENTS_DB=path/to/file.json` before starting |
 
 On first run the app creates `data/events.json` and fills it with the brief's campus data. The `data/` folder is git-ignored.
