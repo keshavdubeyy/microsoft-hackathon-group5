@@ -3,8 +3,8 @@ import streamlit as st
 
 import rules
 from ui.components import (
-    STATUSES, cancel_controls, datetime_inputs, flash_and_rerun, get_store, render_schedule,
-    request_card, venue_picker,
+    STATUSES, cancel_controls, datetime_inputs, flash_and_rerun, get_store, md_message,
+    render_schedule, request_card, venue_picker,
 )
 
 
@@ -23,7 +23,7 @@ def page_new_request(user):
 
     reasons = rules.validate_request(store, title, event_type, venue["id"], start, end, attendance)
     if reasons:
-        st.warning("Fix before submitting:\n" + "\n".join(f"- {r}" for r in reasons))
+        st.warning(md_message("Fix before submitting:\n" + "\n".join(f"- {r}" for r in reasons)))
     else:
         st.info(f"{venue['name']} is available for "
                 f"{rules.describe_window(rules.to_dt_str(start), rules.to_dt_str(end))}.")

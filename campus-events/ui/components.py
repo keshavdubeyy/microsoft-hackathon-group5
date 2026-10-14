@@ -1,4 +1,5 @@
 """Shared widgets and helpers used by the role pages."""
+import re
 from datetime import date, datetime, time
 
 import streamlit as st
@@ -9,6 +10,22 @@ from ui.theme import chip
 
 STATUSES = [rules.PENDING, rules.CONFIRMED, rules.REJECTED, rules.CANCELLED]
 DEFAULT_DATE = date(2026, 8, 5)  # near the brief's seed data, so demos start in the right week
+
+# Markdown punctuation, plus ':' and '.' so typed URLs don't become autolinks.
+_MD_SPECIAL = re.compile(r"([\\`*_{}\[\]()<>#+!|~$:.])")
+
+
+def md(text):
+    """Escape user-entered text for st.markdown, so a title can't render as a link or image."""
+    return _MD_SPECIAL.sub(r"\\\1", str(text))
+
+
+def md_message(message):
+    """Escape a rules message, keeping its '- ' lines as a bullet list."""
+    return "\n".join(
+        "- " + md(line[2:]) if line.startswith("- ") else md(line)
+        for line in str(message).split("\n")
+    )
 
 
 def get_store():
@@ -22,13 +39,13 @@ def flash_and_rerun(result):
         st.session_state["flash"] = result.message
         st.rerun()
     else:
-        st.error(result.message)
+        st.error(md_message(result.message))
 
 
 def show_flash():
     message = st.session_state.pop("flash", None)
     if message:
-        st.success(message)
+        st.success(md_message(message))
 
 
 def venue_picker(container, key):
@@ -59,12 +76,12 @@ def request_card(r, show_requester=False):
     """Bordered summary of one request; returns the container for action buttons."""
     box = st.container(border=True)
     left, right = box.columns([4, 1])
-    left.markdown(f"**#{r['id']} {r['title']}** · {r['event_type']}")
+    left.markdown(f"**#{r['id']} {md(r['title'])}** · {r['event_type']}")
     who = f" · requested by {r['requester_name']}" if show_requester else ""
     left.caption(f"{r['venue_name']} · {window(r)} · {r['attendance']} attendees{who}")
     right.markdown(chip(r["status"].title(), r["status"].lower()), unsafe_allow_html=True)
     if r["decision_reason"]:
-        box.caption(f"Reason: {r['decision_reason']}")
+        box.caption(f"Reason: {md(r['decision_reason'])}")
     return box
 
 

@@ -5,7 +5,7 @@ import streamlit as st
 
 import rules
 from ui.components import (
-    STATUSES, cancel_controls, datetime_inputs, flash_and_rerun, get_store, request_card,
+    STATUSES, cancel_controls, datetime_inputs, flash_and_rerun, get_store, md, request_card,
     venue_picker, window,
 )
 
@@ -59,6 +59,6 @@ def page_venue_blocks(user):
     st.subheader(f"Current blocks ({len(blocks)})")
     for b in blocks:
         c1, c2 = st.columns([5, 1])
-        c1.markdown(f"**{b['venue_name']}** · {window(b)} · {b['reason']}")
+        c1.markdown(f"**{b['venue_name']}** · {window(b)} · {md(b['reason'])}")
         if c2.button("Remove", key=f"remove_block_{b['id']}"):
             flash_and_rerun(rules.remove_block(store, user["id"], b["id"]))

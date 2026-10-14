@@ -1,10 +1,12 @@
-"""Fixes from the code review: local-only server, safe demo reset, public schedule."""
+"""Fixes from the code review: local-only server, safe demo reset, public schedule,
+Markdown escaping."""
 from pathlib import Path
 
 import pytest
 
 import rules
 from tests.test_flow_e2e import button, open_app
+from ui.components import md, md_message
 
 ADMIN, ASHA = 1, 2
 AUDITORIUM = 2
@@ -65,3 +67,29 @@ def test_visitor_sees_held_slot_but_not_title(store, submit):
     submit(title="Unannounced Launch")
     assert _schedule_details(open_app(None, "Venue schedule")) == ["Awaiting review"]
     assert _schedule_details(open_app("ravi", "Venue schedule")) == ["Unannounced Launch"]
+
+
+# ---- Markdown escaping of user-entered text
+
+LINK_TITLE = "[Approve here](https://evil.example) ![x](https://evil.example/p.png)"
+
+
+@pytest.mark.parametrize("text", [LINK_TITLE, "**bold** _it_ `code` $x$", "# Heading", "www.evil.example"])
+def test_md_leaves_no_live_markdown(text):
+    escaped = md(text)
+    unescaped_specials = [c for i, c in enumerate(escaped)
+                          if c in "[]()!*_`$#:." and (i == 0 or escaped[i - 1] != "\\")]
+    assert unescaped_specials == []
+
+
+def test_md_message_keeps_bullets():
+    assert md_message("Cannot approve:\n- Clashes with '[x](y)'.") == \
+        "Cannot approve\\:\n- Clashes with '\\[x\\]\\(y\\)'\\."
+
+
+def test_title_link_is_shown_as_text_to_admin(store, submit):
+    assert submit(title=LINK_TITLE).ok
+    at = open_app("admin", "Review queue")
+    card = next(m.value for m in at.markdown if m.value.startswith("**#3"))
+    assert "](" not in card.replace("\\]\\(", "")  # no live link syntax left
+    assert "\\[Approve here\\]" in card
