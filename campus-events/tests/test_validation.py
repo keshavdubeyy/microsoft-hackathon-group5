@@ -156,3 +156,30 @@ def test_unknown_event_type_is_blocked(submit):
     res = submit(event_type="Wedding")
     assert not res.ok
     assert "Event type must be one of" in res.message
+
+
+# ---- Input hardening: the rules layer never trusts the UI
+
+@pytest.mark.parametrize("venue", [True, "1", 1.0, None])
+def test_venue_id_must_be_a_real_integer(store, submit, venue):
+    """True == 1 in Python, so without a type check True would book Seminar Hall A."""
+    res = submit(venue=venue)
+    assert not res.ok
+    assert "venue does not exist" in res.message
+    assert len(rules.list_requests(store)) == 2
+
+
+@pytest.mark.parametrize("title,expected", [
+    ("A" * 101, "at most 100 characters"),
+    ("Talk\n- Approved by Admin", "single line"),
+    ("Tab\tSeparated", "single line"),
+])
+def test_title_must_be_short_single_line_text(submit, title, expected):
+    res = submit(title=title)
+    assert not res.ok
+    assert expected in res.message
+
+
+def test_title_at_limit_and_non_ascii_are_allowed(submit):
+    assert submit(title="A" * 100).ok
+    assert submit(user=3, venue=4, title="Tech Fest 2026 — उत्सव").ok

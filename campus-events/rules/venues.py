@@ -3,7 +3,9 @@ import logging
 
 from db import find, next_id
 from rules.models import ADMIN, Result, describe_window, failure
-from rules.validation import block_conflicts, booking_conflicts, parse_window
+from rules.validation import (
+    BLOCK_REASON_MAX, block_conflicts, booking_conflicts, find_venue, parse_window, text_field,
+)
 
 log = logging.getLogger("rules")
 
@@ -19,13 +21,10 @@ def add_block(store, user_id, venue_id, start, end, reason):
         if user is None or user["role"] != ADMIN:
             return Result(False, "Only an Admin can block venues.")
 
-        reasons = []
-        venue = find(data["venues"], venue_id)
+        reasons, reason = text_field(reason, "Block reason", BLOCK_REASON_MAX)
+        venue = find_venue(data, venue_id)
         if venue is None:
             reasons.append("Selected venue does not exist.")
-        reason = str(reason or "").strip()
-        if not reason:
-            reasons.append("A block reason is required (e.g. Maintenance, Renovation).")
         time_reasons, start_s, end_s = parse_window(start, end)
         reasons.extend(time_reasons)
         if venue and not time_reasons:

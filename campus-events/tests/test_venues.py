@@ -116,3 +116,17 @@ def test_overlapping_block_is_refused(store):
     assert not second.ok
     assert "Central Amphitheatre is unavailable (Maintenance)" in second.message
     assert len(rules.list_blocks(store, venue_id=AMPHI)) == 1
+
+
+def test_block_venue_id_must_be_a_real_integer(store):
+    res = rules.add_block(store, ADMIN, True, "2026-08-08 09:00", "2026-08-08 18:00", "Maintenance")
+    assert not res.ok
+    assert "venue does not exist" in res.message
+    assert len(rules.list_blocks(store)) == 1  # only the seeded renovation
+
+
+def test_block_reason_must_be_short_single_line_text(store):
+    long = rules.add_block(store, ADMIN, AMPHI, "2026-08-08 09:00", "2026-08-08 18:00", "x" * 201)
+    assert "at most 200 characters" in long.message
+    multi = rules.add_block(store, ADMIN, AMPHI, "2026-08-08 09:00", "2026-08-08 18:00", "Leak\nFloor 2")
+    assert "single line" in multi.message

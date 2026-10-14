@@ -2,6 +2,34 @@
 from db import find
 from rules.models import ACTIVE, CONFIRMED, EVENT_TYPES, describe_window, to_dt_str
 
+TITLE_MAX = 100
+BLOCK_REASON_MAX = 200
+
+
+def find_venue(data, venue_id):
+    """The venue for a real integer id, else None.
+
+    Guards the data file: in Python True == 1, so a bare find() would let
+    venue_id=True match venue 1 and be saved as "venue_id": true.
+    """
+    return find(data["venues"], venue_id) if type(venue_id) is int else None
+
+
+def text_field(value, label, max_len):
+    """Trim a required single-line text field. Returns (reasons, text).
+
+    Single-line keeps titles and reasons from breaking cards, tables and the
+    one-reason-per-line error lists they are quoted in.
+    """
+    text = str(value or "").strip()
+    if not text:
+        return [f"{label} is required."], text
+    if len(text) > max_len:
+        return [f"{label} must be at most {max_len} characters (it has {len(text)})."], text
+    if not text.isprintable():
+        return [f"{label} must be a single line of plain text."], text
+    return [], text
+
 
 def overlaps(start_a, end_a, start_b, end_b):
     """Strict overlap, so back-to-back bookings (10-12 then 12-14) are allowed.
@@ -45,7 +73,7 @@ def booking_conflicts(data, venue_id, start, end, exclude_id=None):
 
 def block_conflicts(data, venue_id, start, end):
     """Reasons why venue blocks (maintenance, renovation...) clash with this window."""
-    venue = find(data["venues"], venue_id)
+    venue = find_venue(data, venue_id)
     name = venue["name"] if venue else "Venue"
     return [
         f"{name} is unavailable ({b['reason']}) on {describe_window(b['start'], b['end'])}."
@@ -65,13 +93,11 @@ def check_request(data, title, event_type, venue_id, start, end, attendance):
 
     Returns (reasons, start_str, end_str) so callers reuse the parsed times.
     """
-    reasons = []
-    if not str(title or "").strip():
-        reasons.append("Event title is required.")
+    reasons, _ = text_field(title, "Event title", TITLE_MAX)
     if event_type not in EVENT_TYPES:
         reasons.append(f"Event type must be one of: {', '.join(EVENT_TYPES)}.")
 
-    venue = find(data["venues"], venue_id)
+    venue = find_venue(data, venue_id)
     if venue is None:
         reasons.append("Selected venue does not exist.")
 
