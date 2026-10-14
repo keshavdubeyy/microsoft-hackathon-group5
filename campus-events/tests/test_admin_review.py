@@ -43,8 +43,9 @@ def test_review_details_reports_requester_history(demo):
 
 def test_queue_shows_details_and_approves(demo, status_of):
     at = open_app("admin", "Review queue")
-    assert len(at.metric) == 4 * 4  # four pending requests, four figures each
+    assert len(at.metric) == 4 * 3  # four pending requests, three figures each
     assert any("No clashes" in i.value for i in at.info)
+    assert not [m for m in at.metric if m.label == "Expected fill"]
     at.button(key="approve_4").click().run()
     assert status_of(4) == rules.CONFIRMED
 
@@ -82,3 +83,25 @@ def test_my_requests_search_only_covers_own_requests(demo):
     assert [m.value for m in at.markdown if m.value.startswith("**#")] == ["**#5 Robotics Club Demo** · Club Activity"]
     at.text_input(key="my_search").input("ravi").run()  # Ravi's requests are not Asha's
     assert "match the search" in at.info[0].value
+
+
+def test_most_recently_updated_request_is_first_and_marked_new(demo):
+    rows = rules.search_requests(demo, "", recent_first=True)
+    assert rows[0]["updated_at"] >= rows[-1]["updated_at"] and rows[0]["is_new"]
+    old = "2000-01-01 00:00:00"
+    with demo.transaction() as data:
+        for r in data["requests"]:
+            r["updated_at"] = old
+    rules.reject(demo, 1, 3, "Not available")  # just decided: moves to the top
+    rows = rules.search_requests(demo, "", recent_first=True)
+    assert rows[0]["id"] == 3 and rows[0]["is_new"]
+    assert not any(r["is_new"] for r in rows[1:])
+
+
+def test_review_queue_search_and_new_badge(demo):
+    at = open_app("admin", "Review queue")
+    assert any(">New<" in m.value for m in at.markdown)
+    at.text_input(key="review_search").input("robotics").run()
+    assert len(at.metric) == 3 and at.button(key="approve_5")
+    at.text_input(key="review_search").input("zzz").run()
+    assert "match your search" in at.info[0].value

@@ -5,7 +5,7 @@ import streamlit as st
 
 import rules
 from ui.components import (
-    STATUSES, datetime_inputs, flash_and_rerun, get_store, request_card, venue_picker, window,
+    STATUSES, datetime_inputs, flash_and_rerun, get_store, request_card, search_box, venue_picker, window,
 )
 
 BLOCK_REASONS = ["Maintenance", "Renovation", "Other operational restriction"]
@@ -14,11 +14,10 @@ BLOCK_REASONS = ["Maintenance", "Renovation", "Other operational restriction"]
 def _review_details(box, store, r):
     """Decision aids shown on each pending request. Returns True if it is safe to approve."""
     d = rules.review_details(store, r["id"])
-    m1, m2, m3, m4 = box.columns(4)
-    m1.metric("Venue capacity", d["capacity"], help=d["venue_type"])
-    m2.metric("Expected fill", f"{d['fill_percent']}%", help=f"{r['attendance']} of {d['capacity']} seats")
-    m3.metric("Duration", f"{d['duration_hours']} h")
-    m4.metric("Requester history", f"{d['requester_confirmed']} confirmed",
+    m1, m2, m3 = box.columns(3)
+    m1.metric("Venue capacity", d["capacity"], help=f"{d['venue_type']}; {r['attendance']} attendees expected")
+    m2.metric("Duration", f"{d['duration_hours']} h")
+    m3.metric("Requester history", f"{d['requester_confirmed']} confirmed",
               help=f"{d['requester_rejected']} rejected earlier")
     box.caption(f"Submitted {d['submitted_at']}")
     if d["conflicts"]:
@@ -38,10 +37,12 @@ def _review_details(box, store, r):
 def page_review_queue(user):
     store = get_store()
     st.header("Review queue")
-    queue = rules.pending_queue(store)
-    st.caption(f"{len(queue)} pending request(s), oldest first. Pending requests hold their venue slot.")
+    text = search_box("review_search")
+    queue = rules.search_requests(store, text, [rules.PENDING], recent_first=True)
+    st.caption(f"{len(queue)} pending request(s), newest first. Pending requests hold their venue slot.")
     if not queue:
-        st.info("Nothing to review. New requests will appear here.")
+        st.info("No pending requests match your search." if text.strip()
+                else "Nothing to review. New requests will appear here.")
     for r in queue:
         box = request_card(r, show_requester=True)
         can_approve = _review_details(box, store, r)
@@ -61,7 +62,7 @@ def page_all_events(user):
     text = c1.text_input("Search", key="all_search", placeholder="Title, venue, requester, type or #id")
     statuses = c2.multiselect("Status", STATUSES, default=STATUSES, key="all_status",
                               format_func=str.title)
-    rows = rules.search_requests(store, text, statuses)
+    rows = rules.search_requests(store, text, statuses, recent_first=True)
     st.caption(f"{len(rows)} request(s) shown.")
     if not rows:
         st.info("No requests match the search and status filter.")
@@ -70,7 +71,7 @@ def page_all_events(user):
     st.dataframe(
         [{"#": r["id"], "Event": r["title"], "Type": r["event_type"], "Venue": r["venue_name"],
           "When": window(r), "Attendees": r["attendance"], "Requested by": r["requester_name"],
-          "Status": r["status"].title(), "Reason": r["decision_reason"] or ""}
+          "Status": r["status"].title() + (" · NEW" if r["is_new"] else ""), "Reason": r["decision_reason"] or ""}
          for r in rows],
         hide_index=True, width="stretch",
     )

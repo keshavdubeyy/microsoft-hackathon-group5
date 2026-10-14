@@ -57,7 +57,7 @@ def page_my_requests(user):
         text = search_box("my_search")
     status = c2.selectbox("Show", ["All"] + STATUSES, format_func=str.title, key="my_requests_status")
     shown = rules.search_requests(
-        store, text, None if status == "All" else [status], requester_id=user["id"]
+        store, text, None if status == "All" else [status], requester_id=user["id"], recent_first=True
     )
     if not shown:
         st.info("None of your requests match the search and status filter.")

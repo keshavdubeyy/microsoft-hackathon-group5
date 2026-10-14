@@ -2,13 +2,16 @@
 import logging
 
 from auth import verify_password
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from db import find
 from rules.models import ACTIVE, CONFIRMED, DT_FORMAT, PENDING, REJECTED
 from rules.validation import find_conflicts
 
 log = logging.getLogger("rules")
+
+NEW_FOR = timedelta(minutes=30)  # a request counts as "new" for this long after its last update
+UPDATED_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 def _public(user):
@@ -45,6 +48,7 @@ def list_requests(store, requester_id=None, status=None, venue_id=None):
     venues = {v["id"]: v["name"] for v in data["venues"]}
     users = {u["id"]: u["name"] for u in data["users"]}
     rows = []
+    cutoff = (datetime.now() - NEW_FOR).strftime(UPDATED_FORMAT)
     for r in data["requests"]:
         if requester_id is not None and r["requester_id"] != requester_id:
             continue
@@ -52,7 +56,10 @@ def list_requests(store, requester_id=None, status=None, venue_id=None):
             continue
         if venue_id is not None and r["venue_id"] != venue_id:
             continue
-        rows.append({**r, "venue_name": venues.get(r["venue_id"]), "requester_name": users.get(r["requester_id"])})
+        rows.append({
+            **r, "venue_name": venues.get(r["venue_id"]), "requester_name": users.get(r["requester_id"]),
+            "is_new": r["updated_at"] >= cutoff,
+        })
     return sorted(rows, key=lambda r: r["start"])
 
 
@@ -86,11 +93,12 @@ def venue_schedule(store, venue_id):
     return sorted(rows, key=lambda row: row["start"])
 
 
-def search_requests(store, text="", statuses=None, requester_id=None):
+def search_requests(store, text="", statuses=None, requester_id=None, recent_first=False):
     """Requests whose title, type, venue, requester or id contains `text` (case-insensitive).
 
     `statuses` limits the result to those statuses; None or empty means all.
     `requester_id` limits it to one requester's own requests.
+    `recent_first` puts the most recently updated (new or just-decided) requests on top.
     """
     needle = str(text or "").strip().lower()
     rows = []
@@ -102,6 +110,8 @@ def search_requests(store, text="", statuses=None, requester_id=None):
         ).lower()
         if needle in haystack:
             rows.append(r)
+    if recent_first:
+        rows.sort(key=lambda r: (r["updated_at"], r["id"]), reverse=True)
     return rows
 
 
