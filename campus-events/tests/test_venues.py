@@ -95,3 +95,10 @@ def test_remove_unknown_block_is_refused(store):
     res = rules.remove_block(store, ADMIN, 99)
     assert not res.ok
     assert "does not exist" in res.message
+
+
+def test_block_reports_all_reasons_together(store):
+    res = rules.add_block(store, ADMIN, SEMINAR_A, "2026-08-04 08:00", "2026-08-04 11:00", "  ")
+    assert not res.ok
+    assert "reason is required" in res.message
+    assert "AI Workshop" in res.message

@@ -9,20 +9,25 @@ log = logging.getLogger("rules")
 
 
 def add_block(store, user_id, venue_id, start, end, reason):
-    """Admin blocks a venue. Refused if it would overlap a pending/confirmed booking."""
+    """Admin blocks a venue. Every reason it cannot be added is returned together.
+
+    Refused if it would overlap a pending/confirmed booking.
+    """
     with store.transaction() as data:
         user = find(data["users"], user_id)
         if user is None or user["role"] != ADMIN:
             return Result(False, "Only an Admin can block venues.")
 
         reasons = []
-        if find(data["venues"], venue_id) is None:
+        venue = find(data["venues"], venue_id)
+        if venue is None:
             reasons.append("Selected venue does not exist.")
-        if not str(reason or "").strip():
+        reason = str(reason or "").strip()
+        if not reason:
             reasons.append("A block reason is required (e.g. Maintenance, Renovation).")
         time_reasons, start_s, end_s = parse_window(start, end)
         reasons.extend(time_reasons)
-        if not reasons:
+        if venue and not time_reasons:
             # A7: never cancel bookings silently; the admin resolves them first.
             reasons.extend(booking_conflicts(data, venue_id, start_s, end_s))
         if reasons:
@@ -33,7 +38,7 @@ def add_block(store, user_id, venue_id, start, end, reason):
             "venue_id": venue_id,
             "start": start_s,
             "end": end_s,
-            "reason": reason.strip(),
+            "reason": reason,
             "created_by": user_id,
         }
         data["blocks"].append(block)
