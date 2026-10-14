@@ -34,3 +34,19 @@ def test_venue_schedule_shows_events_holds_and_blocks(store, submit):
     kinds = [row["kind"] for row in rules.venue_schedule(store, CONF_C)]
     assert kinds == ["Blocked", "Pending hold"]
     assert [row["kind"] for row in rules.venue_schedule(store, SEMINAR_A)] == ["Event"]
+
+
+def test_block_on_unknown_venue_or_bad_window_is_refused(store):
+    assert "does not exist" in rules.add_block(store, ADMIN, 99, "2026-08-08 10:00", "2026-08-08 12:00", "x").message
+    assert not rules.add_block(store, ADMIN, AMPHI, "2026-08-08 12:00", "2026-08-08 10:00", "x").ok
+    assert not rules.add_block(store, ADMIN, AMPHI, "tomorrow", "2026-08-08 10:00", "x").ok
+
+
+def test_removing_missing_block_fails(store):
+    assert "does not exist" in rules.remove_block(store, ADMIN, 999).message
+
+
+def test_list_blocks_includes_venue_name(store):
+    blocks = rules.list_blocks(store)
+    assert [(b["venue_name"], b["reason"]) for b in blocks] == [("Conference Room C", "Renovation")]
+    assert rules.list_blocks(store, venue_id=AMPHI) == []

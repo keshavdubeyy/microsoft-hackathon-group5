@@ -31,8 +31,12 @@ def test_t5_capacity_exceeded_is_blocked(submit):
     assert "capacity of 60" in res.message
 
 
-def test_t6_end_before_start_is_blocked(submit):
-    res = submit(start="2026-08-05 13:00", end="2026-08-05 10:00")
+@pytest.mark.parametrize("start,end", [
+    ("2026-08-05 13:00", "2026-08-05 10:00"),  # T6: end before start
+    ("2026-08-05 10:00", "2026-08-05 10:00"),  # zero-length event
+])
+def test_t6_end_not_after_start_is_blocked(submit, start, end):
+    res = submit(start=start, end=end)
     assert not res.ok
     assert "End date-time must be after start" in res.message
 
@@ -50,9 +54,17 @@ def test_invalid_attendance_is_blocked(submit, attendance):
     assert not submit(attendance=attendance).ok
 
 
-def test_unknown_venue_and_bad_datetime_are_blocked(submit):
-    assert not submit(venue=99).ok
-    assert not submit(start="05/08/2026 10am").ok
+@pytest.mark.parametrize("overrides,expected", [
+    ({"venue": 99}, "venue does not exist"),
+    ({"start": "05/08/2026 10am"}, "valid date-times"),
+    ({"end": ""}, "valid date-times"),
+    ({"event_type": "Party"}, "Event type must be one of"),
+    ({"title": None}, "title is required"),
+])
+def test_bad_input_is_blocked_with_reason(submit, overrides, expected):
+    res = submit(**overrides)
+    assert not res.ok
+    assert expected in res.message
 
 
 def test_multi_day_event_is_allowed(submit):
@@ -75,3 +87,18 @@ def test_live_check_matches_submit(store):
     reasons = rules.validate_request(store, "Talk", "Hackathon", SEMINAR_A,
                                      "2026-08-04 11:00", "2026-08-04 13:00", 50)
     assert len(reasons) == 1 and "AI Workshop" in reasons[0]
+
+
+def test_successful_submit_is_saved_as_pending(submit, request_by_id):
+    res = submit(title="  Spaced Title  ")
+    assert res.ok, res.message
+    saved = request_by_id(res.id)
+    assert saved["status"] == rules.PENDING
+    assert saved["title"] == "Spaced Title"  # surrounding whitespace is trimmed
+    assert saved["venue_name"] == "Main Auditorium"
+    assert saved["requester_name"] == "Asha"
+
+
+def test_attendance_equal_to_capacity_is_allowed(submit):
+    res = submit(venue=INNOV_LAB, start="2026-08-07 10:00", end="2026-08-07 12:00", attendance=60)
+    assert res.ok, res.message

@@ -107,3 +107,40 @@ def test_pending_queue_oldest_first(store, submit):
     a = submit(title="First")
     b = submit(user=RAVI, venue=AMPHI, title="Second")
     assert [r["id"] for r in rules.pending_queue(store)] == [a.id, b.id]
+
+
+# ---- approve and cancel details
+
+def test_admin_approval_confirms_and_records_decider(store, submit, request_by_id):
+    res = submit()
+    assert rules.approve(store, ADMIN, res.id).ok
+    saved = request_by_id(res.id)
+    assert saved["status"] == rules.CONFIRMED
+    assert saved["decided_by"] == ADMIN
+    assert not rules.approve(store, ADMIN, res.id).ok  # already confirmed
+
+
+def test_cancel_records_reason(store, request_by_id):
+    assert rules.cancel(store, ADMIN, LAB_EVENT, "  Speaker unavailable ").ok
+    saved = request_by_id(LAB_EVENT)
+    assert saved["status"] == rules.CANCELLED
+    assert saved["decision_reason"] == "Speaker unavailable"
+
+
+def test_actions_on_missing_request_or_user_fail(store):
+    assert "does not exist" in rules.approve(store, ADMIN, 999).message
+    assert "does not exist" in rules.reject(store, ADMIN, 999, "x").message
+    assert rules.cancel(store, UNKNOWN_USER, SEMINAR_EVENT).message == "Unknown user."
+
+
+def test_list_requests_filters(store, submit):
+    submit()
+    assert {r["id"] for r in rules.list_requests(store, requester_id=RAVI)} == {LAB_EVENT}
+    assert len(rules.list_requests(store, status=rules.CONFIRMED)) == 2
+    assert [r["id"] for r in rules.list_requests(store, venue_id=INNOV_LAB)] == [LAB_EVENT]
+
+
+def test_get_user_hides_password_hash(store):
+    user = rules.get_user(store, ASHA)
+    assert user["name"] == "Asha" and "password_hash" not in user
+    assert rules.get_user(store, UNKNOWN_USER) is None

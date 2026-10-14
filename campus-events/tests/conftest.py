@@ -29,7 +29,17 @@ def submit(store):
 
 
 @pytest.fixture
-def status_of(store):
+def request_by_id(store):
+    """Look up a full request record by id; fails the test clearly if it is missing."""
+    def _request_by_id(request_id):
+        match = next((r for r in rules.list_requests(store) if r["id"] == request_id), None)
+        assert match is not None, f"request {request_id} not found"
+        return match
+    return _request_by_id
+
+
+@pytest.fixture
+def status_of(request_by_id):
     def _status_of(request_id):
-        return next(r for r in rules.list_requests(store) if r["id"] == request_id)["status"]
+        return request_by_id(request_id)["status"]
     return _status_of
