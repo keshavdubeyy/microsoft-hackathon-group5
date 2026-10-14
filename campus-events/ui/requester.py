@@ -42,3 +42,8 @@ def page_new_request(user):
 
 def page_my_requests(user):
     st.header("My requests")
+    requests = rules.list_requests(get_store(), requester_id=user["id"])
+    for r in requests:
+        box = request_card(r)
+        if r["status"] == rules.CONFIRMED:
+            cancel_controls(box, user, r)
