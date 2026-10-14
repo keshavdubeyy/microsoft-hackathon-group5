@@ -1,7 +1,7 @@
 """Read-only views for the UI, and staff login. Nothing here changes data."""
 import logging
 
-from auth import verify_password
+from auth import DUMMY_HASH, verify_password
 from db import find
 from rules.models import ACTIVE, CONFIRMED, PENDING
 
@@ -16,7 +16,8 @@ def authenticate(store, username, password):
     """Staff login. Returns the user (without password hash) or None."""
     username = str(username or "").strip().lower()
     user = next((u for u in store.read()["users"] if u["username"] == username), None)
-    if user is None or not verify_password(str(password or ""), user["password_hash"]):
+    matches = verify_password(str(password or ""), user["password_hash"] if user else DUMMY_HASH)
+    if user is None or not matches:
         log.info("failed login for username=%r", username)
         return None
     log.info("user=%s logged in", user["name"])

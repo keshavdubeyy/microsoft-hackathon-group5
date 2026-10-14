@@ -1,10 +1,12 @@
 """Fixes from the code review: local-only server, safe demo reset, public schedule,
-Markdown escaping."""
+Markdown escaping, login hardening."""
 from pathlib import Path
 
 import pytest
 
+import auth
 import rules
+import rules.queries
 from tests.test_flow_e2e import button, open_app
 from ui.components import md, md_message
 
@@ -93,3 +95,25 @@ def test_title_link_is_shown_as_text_to_admin(store, submit):
     card = next(m.value for m in at.markdown if m.value.startswith("**#3"))
     assert "](" not in card.replace("\\]\\(", "")  # no live link syntax left
     assert "\\[Approve here\\]" in card
+
+
+# ---- login hardening
+
+def test_unknown_username_still_checks_a_password(store, monkeypatch):
+    checked = []
+    real = rules.queries.verify_password
+    monkeypatch.setattr(rules.queries, "verify_password",
+                        lambda pw, stored: checked.append(stored) or real(pw, stored))
+    assert rules.authenticate(store, "nobody", "admin123") is None
+    assert checked == [auth.DUMMY_HASH]  # same hashing work as a real account
+
+
+@pytest.mark.parametrize("stored", ["zz$abcd", "nodollar", "a$b$c", "", None])
+def test_damaged_password_hash_is_never_a_match(stored):
+    assert auth.verify_password("x", stored) is False
+
+
+def test_damaged_hash_in_data_file_refuses_login(store):
+    with store.transaction() as data:
+        data["users"][0]["password_hash"] = "not-hex$00"
+    assert rules.authenticate(store, "admin", "admin123") is None
