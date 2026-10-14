@@ -102,3 +102,13 @@ def test_block_reports_all_reasons_together(store):
     assert not res.ok
     assert "reason is required" in res.message
     assert "AI Workshop" in res.message
+
+
+def test_overlapping_block_is_refused(store):
+    """Also stops a double-click on 'Add block' from saving the block twice."""
+    args = (store, ADMIN, AMPHI, "2026-08-08 09:00", "2026-08-08 18:00", "Maintenance")
+    assert rules.add_block(*args).ok
+    second = rules.add_block(*args)
+    assert not second.ok
+    assert "Maintenance" in second.message
+    assert len(rules.list_blocks(store, venue_id=AMPHI)) == 1

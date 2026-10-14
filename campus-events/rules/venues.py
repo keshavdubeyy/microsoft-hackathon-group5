@@ -3,7 +3,7 @@ import logging
 
 from db import find, next_id
 from rules.models import ADMIN, Result, describe_window, failure
-from rules.validation import booking_conflicts, parse_window
+from rules.validation import block_conflicts, booking_conflicts, parse_window
 
 log = logging.getLogger("rules")
 
@@ -11,7 +11,8 @@ log = logging.getLogger("rules")
 def add_block(store, user_id, venue_id, start, end, reason):
     """Admin blocks a venue. Every reason it cannot be added is returned together.
 
-    Refused if it would overlap a pending/confirmed booking.
+    Refused if it would overlap a pending/confirmed booking, or an existing
+    block on the same venue (which also stops a double-click saving it twice).
     """
     with store.transaction() as data:
         user = find(data["users"], user_id)
@@ -28,6 +29,7 @@ def add_block(store, user_id, venue_id, start, end, reason):
         time_reasons, start_s, end_s = parse_window(start, end)
         reasons.extend(time_reasons)
         if venue and not time_reasons:
+            reasons.extend(block_conflicts(data, venue_id, start_s, end_s))
             # A7: never cancel bookings silently; the admin resolves them first.
             reasons.extend(booking_conflicts(data, venue_id, start_s, end_s))
         if reasons:
