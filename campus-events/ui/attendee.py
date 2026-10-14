@@ -11,6 +11,11 @@ def page_upcoming_events(user):
     if not events:
         st.info("No confirmed events yet.")
         return
+    venue_names = sorted({e["venue_name"] for e in events})
+    chosen = st.selectbox("Filter by venue", ["All venues"] + venue_names, key="events_venue_filter")
+    if chosen != "All venues":
+        events = [e for e in events if e["venue_name"] == chosen]
+    st.caption(f"{len(events)} confirmed event(s), earliest first.")
     st.dataframe(
         [{"Event": e["title"], "Type": e["event_type"], "Venue": e["venue_name"], "When": window(e)}
          for e in events],
