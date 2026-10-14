@@ -76,8 +76,8 @@ def cancel_controls(box, user, r):
         flash_and_rerun(rules.cancel(get_store(), user["id"], r["id"], reason))
 
 
-def render_schedule(venue_id):
-    rows = rules.venue_schedule(get_store(), venue_id)
+def render_schedule(venue_id, public=False):
+    rows = rules.venue_schedule(get_store(), venue_id, public=public)
     if not rows:
         st.info("Nothing booked or blocked — the venue is free.")
         return

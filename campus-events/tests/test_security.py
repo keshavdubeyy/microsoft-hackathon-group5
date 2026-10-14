@@ -1,4 +1,4 @@
-"""Fixes from the code review: local-only server, safe demo reset."""
+"""Fixes from the code review: local-only server, safe demo reset, public schedule."""
 from pathlib import Path
 
 import pytest
@@ -7,6 +7,7 @@ import rules
 from tests.test_flow_e2e import button, open_app
 
 ADMIN, ASHA = 1, 2
+AUDITORIUM = 2
 CONFIG = Path(__file__).resolve().parent.parent / ".streamlit" / "config.toml"
 
 
@@ -43,3 +44,24 @@ def test_reset_needs_confirmation_in_ui(store, submit):
     button(at, "Yes, reset").click().run()
     assert "reset" in at.success[0].value
     assert len(rules.list_requests(store)) == 2
+
+
+# ---- public venue schedule
+
+def test_public_schedule_hides_pending_titles(store, submit):
+    submit(title="Unannounced Launch")
+    public = rules.venue_schedule(store, AUDITORIUM, public=True)
+    assert [(row["kind"], row["title"]) for row in public] == [("Pending hold", "Awaiting review")]
+    staff = rules.venue_schedule(store, AUDITORIUM)
+    assert staff[0]["title"] == "Unannounced Launch"
+
+
+def _schedule_details(at):
+    at.selectbox(key="schedule_venue").set_value(AUDITORIUM).run()
+    return at.dataframe[0].value["Details"].tolist()
+
+
+def test_visitor_sees_held_slot_but_not_title(store, submit):
+    submit(title="Unannounced Launch")
+    assert _schedule_details(open_app(None, "Venue schedule")) == ["Awaiting review"]
+    assert _schedule_details(open_app("ravi", "Venue schedule")) == ["Unannounced Launch"]

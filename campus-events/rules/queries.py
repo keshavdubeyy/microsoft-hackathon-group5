@@ -68,11 +68,16 @@ def list_blocks(store, venue_id=None):
     )
 
 
-def venue_schedule(store, venue_id):
-    """Everything occupying a venue: confirmed events, pending holds and blocks."""
+def venue_schedule(store, venue_id, public=False):
+    """Everything occupying a venue: confirmed events, pending holds and blocks.
+
+    public=True is the attendee view: pending requests are not approved yet,
+    so only the held time is shown, not the title.
+    """
     rows = [
         {"kind": "Event" if r["status"] == CONFIRMED else "Pending hold",
-         "title": r["title"], "start": r["start"], "end": r["end"], "ref": r["id"]}
+         "title": "Awaiting review" if public and r["status"] == PENDING else r["title"],
+         "start": r["start"], "end": r["end"], "ref": r["id"]}
         for r in list_requests(store, venue_id=venue_id)
         if r["status"] in ACTIVE
     ]
